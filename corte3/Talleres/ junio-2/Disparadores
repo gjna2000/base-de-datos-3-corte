@@ -1,1 +1,99 @@
+--DISPARADORES
+--Caso de Uso 1: Registrar el Historial de Cambios en Observaciones de Alquileres
+
+--Situación: La tabla alquiler posee una columna observaciones (tipo TEXT), pero no guarda registro
+--de las modificaciones realizadas, ni por quién ni cuándo se hicieron.
+--Solución propuesta: Crear un trigger que, al detectar un cambio en dicha columna, concatene 
+--la nueva observación con la anterior, incluyendo fecha, hora y el usuario responsable.
+
+CREATE OR REPLACE FUNCTION alquiler.registrar_historial_observacion()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND OLD.observaciones IS DISTINCT FROM NEW.observaciones THEN
+        NEW.observaciones := OLD.observaciones || E'\n' ||
+                             '[' || current_timestamp || '] Usuario: ' || current_user || ': ' || NEW.observaciones;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_actualizar_observaciones
+BEFORE UPDATE ON alquiler.alquiler
+FOR EACH ROW
+EXECUTE FUNCTION alquiler.registrar_historial_observacion();
+
+
+--Prueba de funcionamiento del trigger
+UPDATE alquiler.alquiler
+SET observaciones = 'Se acordó una nueva fecha de entrega con el cliente.'
+WHERE id_alquiler = 1;
+
+--Consulta del resultado tras la actualización
+SELECT observaciones FROM alquiler.alquiler WHERE id_alquiler = 1;
+
+--Respuesta esperada:
+--Alquiler para evento
+--[2025-05-31 16:11:26.598067-05] Usuario: postgres: Se acordó una nueva fecha de entrega con el cliente.
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------
+
+--Caso de Uso 2: Validación de la Fecha de Entrega Real
+
+--Situación: Existe el riesgo de que la columna fecha_entrega_real reciba un valor anterior
+--a la fecha_inicio, lo cual es inconsistente.
+--Solución propuesta: Usar un trigger que bloquee la actualización si se intenta ingresar 
+--una fecha inválida.
+
+CREATE OR REPLACE FUNCTION alquiler.verificar_fecha_entrega()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND NEW.fecha_entrega_real IS NOT NULL AND NEW.fecha_entrega_real < NEW.fecha_inicio THEN
+        RAISE EXCEPTION 'La fecha de entrega real no puede ser menor a la fecha de inicio.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validar_fecha_entrega
+BEFORE UPDATE ON alquiler.alquiler
+FOR EACH ROW
+EXECUTE FUNCTION alquiler.verificar_fecha_entrega();
+
+--Prueba con fecha inválida (anterior a la fecha_inicio)
+--UPDATE alquiler.alquiler
+--SET fecha_entrega_real = '2024-01-05'
+--WHERE id_alquiler = 1;
+
+--Debería arrojar el siguiente error:
+--ERROR: La fecha de entrega real no puede ser menor a la fecha de inicio.
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------
+
+--Caso de Uso 3: Validar Montos Negativos en Pagos
+
+--Situación: El sistema permite registrar montos negativos en la tabla pago, lo cual no es correcto.
+--Solución propuesta: Añadir un trigger que impida insertar valores negativos en el campo monto.
+
+CREATE OR REPLACE FUNCTION alquiler.revisar_monto_pago()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.monto < 0 THEN
+        RAISE EXCEPTION 'No se permite registrar montos negativos en pagos.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validar_pago
+BEFORE INSERT ON alquiler.pago
+FOR EACH ROW
+EXECUTE FUNCTION alquiler.revisar_monto_pago();
+
+--Este trigger asegura que solo se permitan montos positivos.
+--Si se intenta ingresar un monto negativo, se lanza la siguiente excepción:
+--ERROR: No se permite registrar montos negativos en pagos.
 
