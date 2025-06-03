@@ -1,1 +1,159 @@
+-- CREACIÓN DE ESQUEMAS
+CREATE SCHEMA gestion_usuarios;
+CREATE SCHEMA reparaciones;
+
+-- TABLA DE USUARIOS
+CREATE TABLE gestion_usuarios.persona (
+    persona_id SERIAL PRIMARY KEY,
+    identificacion VARCHAR(20) UNIQUE NOT NULL,
+    nombre_completo VARCHAR(100) NOT NULL,
+    direccion_residencia VARCHAR(255),
+    celular_contacto VARCHAR(20),
+    correo_electronico VARCHAR(100)
+);
+
+-- TABLA DE TIPOS DE EQUIPO
+CREATE TABLE gestion_usuarios.tipo_equipo (
+    tipo_id SERIAL PRIMARY KEY,
+    tipo_nombre VARCHAR(50) NOT NULL
+);
+
+-- TABLA DE ESTADOS DE EQUIPO
+CREATE TABLE reparaciones.condicion_equipo (
+    condicion_id SERIAL PRIMARY KEY,
+    descripcion_estado VARCHAR(50) NOT NULL
+);
+
+-- TABLA DE INVENTARIO
+CREATE TABLE gestion_usuarios.inventario (
+    inventario_id SERIAL PRIMARY KEY,
+    producto_nombre VARCHAR(100) NOT NULL,
+    detalle TEXT,
+    tarifa_diaria DECIMAL(10, 2) NOT NULL,
+    tipo_id INTEGER NOT NULL,
+    condicion_id INTEGER NOT NULL,
+    FOREIGN KEY (tipo_id) REFERENCES gestion_usuarios.tipo_equipo(tipo_id),
+    FOREIGN KEY (condicion_id) REFERENCES reparaciones.condicion_equipo(condicion_id)
+);
+
+-- TABLA DE RESERVAS
+CREATE TABLE gestion_usuarios.reserva (
+    reserva_id SERIAL PRIMARY KEY,
+    persona_id INTEGER NOT NULL,
+    fecha_reserva DATE NOT NULL,
+    fecha_devolucion_estimada DATE NOT NULL,
+    fecha_entrega DATE,
+    notas TEXT,
+    FOREIGN KEY (persona_id) REFERENCES gestion_usuarios.persona(persona_id)
+);
+
+-- TABLA DE DETALLES DE RESERVA
+CREATE TABLE gestion_usuarios.detalle_reserva (
+    detalle_id SERIAL PRIMARY KEY,
+    reserva_id INTEGER NOT NULL,
+    inventario_id INTEGER NOT NULL,
+    unidades INTEGER NOT NULL,
+    precio_unitario DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (reserva_id) REFERENCES gestion_usuarios.reserva(reserva_id),
+    FOREIGN KEY (inventario_id) REFERENCES gestion_usuarios.inventario(inventario_id)
+);
+
+-- TABLA DE DEVOLUCIONES
+CREATE TABLE gestion_usuarios.retorno (
+    retorno_id SERIAL PRIMARY KEY,
+    reserva_id INTEGER NOT NULL,
+    fecha_retorno DATE NOT NULL,
+    estado_producto TEXT,
+    comentarios TEXT,
+    FOREIGN KEY (reserva_id) REFERENCES gestion_usuarios.reserva(reserva_id)
+);
+
+-- TABLA DE PAGOS
+CREATE TABLE gestion_usuarios.transaccion (
+    transaccion_id SERIAL PRIMARY KEY,
+    reserva_id INTEGER NOT NULL,
+    fecha_transaccion TIMESTAMP NOT NULL,
+    forma_pago VARCHAR(50) NOT NULL,
+    valor_pago DECIMAL(10, 2) NOT NULL,
+    codigo_referencia VARCHAR(100),
+    FOREIGN KEY (reserva_id) REFERENCES gestion_usuarios.reserva(reserva_id)
+);
+
+-- TABLA DE DISPONIBILIDAD
+CREATE TABLE gestion_usuarios.estado_inventario (
+    disponibilidad_id SERIAL PRIMARY KEY,
+    inventario_id INTEGER NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    situacion VARCHAR(20) NOT NULL,
+    FOREIGN KEY (inventario_id) REFERENCES gestion_usuarios.inventario(inventario_id)
+);
+
+-- TABLA DE REPORTES DE DAÑOS
+CREATE TABLE reparaciones.novedades (
+    reporte_id SERIAL PRIMARY KEY,
+    retorno_id INTEGER NOT NULL,
+    inventario_id INTEGER NOT NULL,
+    descripcion TEXT NOT NULL,
+    valor_estimado DECIMAL(10, 2),
+    FOREIGN KEY (retorno_id) REFERENCES gestion_usuarios.retorno(retorno_id),
+    FOREIGN KEY (inventario_id) REFERENCES gestion_usuarios.inventario(inventario_id)
+);
+
+-- TABLA DE REGISTROS DE MANTENIMIENTO
+CREATE TABLE reparaciones.servicio (
+    servicio_id SERIAL PRIMARY KEY,
+    inventario_id INTEGER NOT NULL,
+    inicio DATE NOT NULL,
+    fin DATE,
+    motivo TEXT NOT NULL,
+    costo DECIMAL(10, 2),
+    FOREIGN KEY (inventario_id) REFERENCES gestion_usuarios.inventario(inventario_id)
+);
+
+-- DATOS DE EJEMPLO
+INSERT INTO gestion_usuarios.persona (identificacion, nombre_completo, direccion_residencia, celular_contacto, correo_electronico)
+VALUES ('1009802312', 'Miguel Torres', 'Av. 6 Este #22-45', '3124567890', 'miguel.torres@email.com'),
+       ('1003412789', 'Vanessa Ríos', 'Diagonal 12 #18-90', '3209876543', 'vrios@mail.com');
+
+INSERT INTO gestion_usuarios.tipo_equipo (tipo_nombre)
+VALUES ('Video'), ('Sonido'), ('Accesorios');
+
+INSERT INTO reparaciones.condicion_equipo (descripcion_estado)
+VALUES ('Disponible'), ('Prestado'), ('En reparación');
+
+INSERT INTO gestion_usuarios.inventario (producto_nombre, detalle, tarifa_diaria, tipo_id, condicion_id)
+VALUES ('Cámara 4K UHD', 'Incluye trípode ajustable y control remoto', 70.00, 1, 1),
+       ('Parlante Bluetooth Profesional', 'Alcance de hasta 30m', 25.00, 2, 1),
+       ('Trípode de fibra de carbono', 'Soporta hasta 5 kg', 15.00, 3, 1),
+       ('Kit de luces LED blancas', 'Batería recargable incluida', 40.00, 3, 1);
+
+INSERT INTO gestion_usuarios.reserva (persona_id, fecha_reserva, fecha_devolucion_estimada, fecha_entrega, notas)
+VALUES (1, '2024-07-12', '2024-07-16', NULL, 'Proyecto audiovisual institucional'),
+       (2, '2024-07-20', '2024-07-25', NULL, 'Cobertura de evento universitario');
+
+INSERT INTO gestion_usuarios.detalle_reserva (reserva_id, inventario_id, unidades, precio_unitario)
+VALUES (1, 1, 1, 70.00),
+       (1, 2, 1, 25.00),
+       (2, 3, 2, 15.00),
+       (2, 4, 1, 40.00);
+
+INSERT INTO gestion_usuarios.retorno (reserva_id, fecha_retorno, estado_producto, comentarios)
+VALUES (1, '2024-07-16', 'Operativo', 'Todo regresó correctamente'),
+       (2, '2024-07-25', 'Detalle menor en el trípode', 'Se notificó al técnico');
+
+INSERT INTO gestion_usuarios.transaccion (reserva_id, fecha_transaccion, forma_pago, valor_pago, codigo_referencia)
+VALUES (1, '2024-07-12 10:15:00', 'Tarjeta crédito', 95.00, 'TXP3045'),
+       (2, '2024-07-20 15:30:00', 'Nequi', 70.00, 'TXN5421');
+
+INSERT INTO gestion_usuarios.estado_inventario (inventario_id, fecha_inicio, fecha_fin, situacion)
+VALUES (1, '2024-07-01', '2024-07-11', 'Libre'),
+       (1, '2024-07-12', '2024-07-16', 'Reservado'),
+       (1, '2024-07-17', '2024-07-31', 'Libre');
+
+INSERT INTO reparaciones.novedades (retorno_id, inventario_id, descripcion, valor_estimado)
+VALUES (2, 3, 'Rosca de ajuste floja en pata del trípode', 10.00);
+
+INSERT INTO reparaciones.servicio (inventario_id, inicio, fin, motivo, costo)
+VALUES (3, '2024-08-02', '2024-08-04', 'Ajuste y limpieza mecánica', 12.00);
 
