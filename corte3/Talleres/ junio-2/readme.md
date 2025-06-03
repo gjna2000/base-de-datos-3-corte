@@ -34,3 +34,5 @@ BEGIN
     INSERT INTO auditoria (usuario, accion, fecha)
     VALUES (USER(), 'Inserción', NOW());
 END;
+
+
