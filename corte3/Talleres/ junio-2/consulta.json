@@ -1,0 +1,411 @@
+// ===== GUÍA COMPLETA DE OPERADORES MONGODB =====
+// Colección: empleados (Sistema de Recursos Humanos)
+
+// Estructura de datos de ejemplo
+use empresaDB;
+db.createCollection("empleados");
+
+// Datos de muestra para las consultas
+db.empleados.insertMany([
+  {
+    codigo: "EMP001",
+    nombreCompleto: "Ana García López",
+    departamento: "Desarrollo",
+    salario: 45000,
+    experiencia: 3,
+    proyectos: ["WebApp", "MobileApp"],
+    activo: true,
+    fechaIngreso: new Date("2021-03-15")
+  },
+  {
+    codigo: "EMP002", 
+    nombreCompleto: "Carlos Rodríguez Pérez",
+    departamento: "Marketing",
+    salario: 38000,
+    experiencia: 2,
+    proyectos: ["Campaña2024", "SocialMedia"],
+    activo: true,
+    fechaIngreso: new Date("2022-06-20")
+  },
+  {
+    codigo: "EMP003",
+    nombreCompleto: "María Fernández Silva",
+    departamento: "Desarrollo",
+    salario: 52000,
+    experiencia: 5,
+    proyectos: ["Backend", "API", "Database"],
+    activo: false,
+    fechaIngreso: new Date("2019-11-10")
+  },
+  {
+    codigo: "EMP004",
+    nombreCompleto: "José Martínez Ruiz",
+    departamento: "Ventas",
+    salario: 41000,
+    experiencia: 4,
+    proyectos: ["ClientesPremium"],
+    activo: true,
+    fechaIngreso: new Date("2020-08-05")
+  }
+]);
+
+// ===== OPERADORES DE COMPARACIÓN =====
+
+/* 
+🔹 $eq (Equals) - Igualdad exacta
+Encuentra documentos donde el campo sea igual al valor especificado
+*/
+// Buscar empleados con exactamente 3 años de experiencia
+db.empleados.find({ experiencia: { $eq: 3 } });
+
+// Forma simplificada (equivalente)
+db.empleados.find({ experiencia: 3 });
+
+/* 
+🔹 $ne (Not Equal) - Diferente de
+Encuentra documentos donde el campo NO sea igual al valor
+*/
+// Buscar empleados con salario diferente a 45000
+db.empleados.find({ salario: { $ne: 45000 } });
+
+// Buscar empleados que no trabajen en Marketing
+db.empleados.find({ departamento: { $ne: "Marketing" } });
+
+/* 
+🔹 $gt (Greater Than) - Mayor que
+Encuentra documentos donde el valor del campo sea mayor
+*/
+// Buscar empleados con salario mayor a 40000
+db.empleados.find({ salario: { $gt: 40000 } });
+
+// Buscar empleados con más de 3 años de experiencia
+db.empleados.find({ experiencia: { $gt: 3 } });
+
+/* 
+🔹 $lt (Less Than) - Menor que
+Encuentra documentos donde el valor del campo sea menor
+*/
+// Buscar empleados con menos de 4 años de experiencia
+db.empleados.find({ experiencia: { $lt: 4 } });
+
+// Buscar empleados con salario menor a 50000
+db.empleados.find({ salario: { $lt: 50000 } });
+
+/* 
+🔹 $gte (Greater Than or Equal) - Mayor o igual que
+Encuentra documentos donde el valor sea mayor o igual
+*/
+// Buscar empleados con 4 o más años de experiencia
+db.empleados.find({ experiencia: { $gte: 4 } });
+
+// Buscar empleados con salario de 40000 o más
+db.empleados.find({ salario: { $gte: 40000 } });
+
+/* 
+🔹 $lte (Less Than or Equal) - Menor o igual que
+Encuentra documentos donde el valor sea menor o igual
+*/
+// Buscar empleados con 3 años de experiencia o menos
+db.empleados.find({ experiencia: { $lte: 3 } });
+
+// Buscar empleados con salario de 45000 o menos
+db.empleados.find({ salario: { $lte: 45000 } });
+
+/* 
+🔹 $in (In Array) - Dentro de una lista
+Encuentra documentos donde el campo coincida con cualquier valor del array
+⚠️ IMPORTANTE: Usar comillas dobles, no simples
+*/
+// Buscar empleados de departamentos específicos
+db.empleados.find({
+  departamento: { $in: ["Desarrollo", "Ventas"] }
+});
+
+// Buscar empleados por nombres específicos
+db.empleados.find({
+  nombreCompleto: { 
+    $in: ["Ana García López", "Carlos Rodríguez Pérez"] 
+  }
+});
+
+// Buscar empleados con experiencia específica
+db.empleados.find({
+  experiencia: { $in: [2, 4, 5] }
+});
+
+/* 
+🔹 $nin (Not In Array) - No dentro de una lista
+Encuentra documentos donde el campo NO coincida con ningún valor del array
+⚠️ IMPORTANTE: Usar comillas dobles, no simples
+*/
+// Buscar empleados que NO trabajen en Marketing ni Ventas
+db.empleados.find({
+  departamento: { $nin: ["Marketing", "Ventas"] }
+});
+
+// Buscar empleados que NO tengan estos nombres
+db.empleados.find({
+  nombreCompleto: { 
+    $nin: ["Ana García López", "José Martínez Ruiz"] 
+  }
+});
+
+// ===== OPERADORES LÓGICOS =====
+
+/* 
+🔸 $and - Operador Y lógico
+Todas las condiciones deben cumplirse
+*/
+// Buscar empleados con salario >= 40000 AND experiencia > 2
+db.empleados.find({
+  $and: [
+    { salario: { $gte: 40000 } },
+    { experiencia: { $gt: 2 } }
+  ]
+});
+
+// Buscar empleados activos del departamento de Desarrollo
+db.empleados.find({
+  $and: [
+    { activo: true },
+    { departamento: "Desarrollo" }
+  ]
+});
+
+// Forma implícita (equivalente cuando no hay conflictos)
+db.empleados.find({
+  salario: { $gte: 40000 },
+  experiencia: { $gt: 2 }
+});
+
+/* 
+🔸 $or - Operador O lógico
+Al menos una condición debe cumplirse
+*/
+// Buscar empleados con salario < 40000 O experiencia > 4
+db.empleados.find({
+  $or: [
+    { salario: { $lt: 40000 } },
+    { experiencia: { $gt: 4 } }
+  ]
+});
+
+// Buscar empleados de Marketing o inactivos
+db.empleados.find({
+  $or: [
+    { departamento: "Marketing" },
+    { activo: false }
+  ]
+});
+
+/* 
+🔸 $not - Operador de negación
+Niega la condición especificada
+*/
+// Buscar empleados que NO tienen salario mayor a 45000
+db.empleados.find({
+  salario: { $not: { $gt: 45000 } }
+});
+
+// Buscar empleados que NO tienen exactamente 3 años de experiencia
+db.empleados.find({
+  experiencia: { $not: { $eq: 3 } }
+});
+
+// Buscar empleados que NO están en el departamento de Desarrollo
+db.empleados.find({
+  departamento: { $not: { $eq: "Desarrollo" } }
+});
+
+/* 
+🔸 $nor - Operador NI lógico
+Ninguna de las condiciones debe cumplirse
+*/
+// Buscar empleados que NO son junior (< 3 años) Y NO tienen salario alto (> 50000)
+db.empleados.find({
+  $nor: [
+    { experiencia: { $lt: 3 } },
+    { salario: { $gt: 50000 } }
+  ]
+});
+
+// Buscar empleados que NO están en Marketing Y NO están inactivos
+db.empleados.find({
+  $nor: [
+    { departamento: "Marketing" },
+    { activo: false }
+  ]
+});
+
+// ===== EJEMPLOS COMBINADOS AVANZADOS =====
+
+// Consulta compleja: Empleados senior activos con buen salario
+db.empleados.find({
+  $and: [
+    { activo: true },
+    { experiencia: { $gte: 4 } },
+    { salario: { $gt: 40000 } },
+    { departamento: { $in: ["Desarrollo", "Ventas"] } }
+  ]
+});
+
+// Empleados que necesitan revisión salarial
+db.empleados.find({
+  $or: [
+    {
+      $and: [
+        { experiencia: { $gte: 4 } },
+        { salario: { $lt: 45000 } }
+      ]
+    },
+    {
+      $and: [
+        { departamento: "Desarrollo" },
+        { salario: { $lt: 50000 } }
+      ]
+    }
+  ]
+});
+
+// Empleados con perfil específico usando $nor
+db.empleados.find({
+  $and: [
+    { activo: true },
+    {
+      $nor: [
+        { departamento: "Marketing" },
+        { experiencia: { $lt: 2 } },
+        { salario: { $gt: 55000 } }
+      ]
+    }
+  ]
+});
+
+// ===== CONSULTAS CON PROYECCIÓN =====
+
+// Mostrar solo nombre y salario de empleados con alta experiencia
+db.empleados.find(
+  { experiencia: { $gte: 4 } },
+  { nombreCompleto: 1, salario: 1, _id: 0 }
+);
+
+// Mostrar empleados junior con información básica
+db.empleados.find(
+  { 
+    $and: [
+      { experiencia: { $lte: 2 } },
+      { activo: true }
+    ]
+  },
+  { 
+    nombreCompleto: 1, 
+    departamento: 1, 
+    fechaIngreso: 1,
+    _id: 0 
+  }
+);
+
+// ===== CONSULTAS CON ORDENAMIENTO =====
+
+// Empleados ordenados por salario descendente
+db.empleados.find({
+  salario: { $gte: 40000 }
+}).sort({ salario: -1 });
+
+// Empleados ordenados por experiencia y luego por salario
+db.empleados.find({
+  activo: true
+}).sort({ 
+  experiencia: -1, 
+  salario: -1 
+});
+
+// ===== CONSULTAS CON LÍMITES =====
+
+// Top 2 empleados con mayor salario
+db.empleados.find({}).sort({ salario: -1 }).limit(2);
+
+// Empleados con paginación (saltar 1, mostrar 2)
+db.empleados.find({
+  activo: true
+}).sort({ nombreCompleto: 1 }).skip(1).limit(2);
+
+// ===== CONTEO DE DOCUMENTOS =====
+
+// Contar empleados activos
+db.empleados.countDocuments({ activo: true });
+
+// Contar empleados por departamento
+db.empleados.countDocuments({ departamento: "Desarrollo" });
+
+// Contar empleados senior
+db.empleados.countDocuments({ 
+  experiencia: { $gte: 4 } 
+});
+
+// ===== CONSULTAS EN ARRAYS =====
+
+// Buscar empleados que trabajaron en proyecto específico
+db.empleados.find({ 
+  proyectos: "WebApp" 
+});
+
+// Buscar empleados con múltiples proyectos
+db.empleados.find({
+  proyectos: { $size: 3 }
+});
+
+// Buscar empleados con proyectos específicos
+db.empleados.find({
+  proyectos: { $in: ["Backend", "API"] }
+});
+
+// ===== OPERADORES DE EXISTENCIA =====
+
+// Buscar empleados que tienen campo proyectos
+db.empleados.find({
+  proyectos: { $exists: true }
+});
+
+// Buscar empleados con proyectos no vacíos
+db.empleados.find({
+  $and: [
+    { proyectos: { $exists: true } },
+    { proyectos: { $ne: [] } }
+  ]
+});
+
+// ===== CONSULTAS CON EXPRESIONES REGULARES =====
+
+// Buscar empleados cuyo nombre empiece con "Ana"
+db.empleados.find({
+  nombreCompleto: /^Ana/
+});
+
+// Buscar empleados con "García" en el nombre
+db.empleados.find({
+  nombreCompleto: /García/i  // i = insensible a mayúsculas
+});
+
+// ===== RESUMEN DE BUENAS PRÁCTICAS =====
+
+/*
+✅ RECOMENDACIONES:
+1. Usar índices para campos consultados frecuentemente
+2. Combinar operadores eficientemente
+3. Usar proyección para limitar datos retornados
+4. Usar countDocuments() en lugar de count()
+5. Siempre usar comillas dobles en $in y $nin
+
+❌ EVITAR:
+1. Usar $where cuando sea posible
+2. Consultas sin índices en colecciones grandes
+3. Proyecciones innecesariamente complejas
+4. Operadores $or con muchas condiciones
+*/
+
+// Crear índices para optimizar consultas frecuentes
+db.empleados.createIndex({ departamento: 1 });
+db.empleados.createIndex({ salario: 1 });
+db.empleados.createIndex({ experiencia: 1 });
+db.empleados.createIndex({ activo: 1, departamento: 1 });
