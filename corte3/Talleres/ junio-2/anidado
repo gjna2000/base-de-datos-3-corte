@@ -11,7 +11,7 @@ db.pokemons.find(
   { nombre: true, games: true }
 );
 
-// ✅ SOLUCIÓN OPTIMIZADA: Sin $where, más eficiente
+//  SOLUCIÓN OPTIMIZADA: Sin $where, más eficiente
 db.pokemons.find(
   {
     games: { 
