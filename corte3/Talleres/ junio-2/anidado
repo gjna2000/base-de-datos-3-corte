@@ -1,1 +1,403 @@
+// ===== CONSULTAS OPTIMIZADAS SIN $where =====
 
+
+db.pokemons.find(
+  { 
+    $and: [ 
+      { games: { $exists: true } }, 
+      { $where: "this.games.length >= 5" } // Corregido: length, no "lengyh"
+    ] 
+  },
+  { nombre: true, games: true }
+);
+
+// ✅ SOLUCIÓN OPTIMIZADA: Sin $where, más eficiente
+db.pokemons.find(
+  {
+    games: { 
+      $exists: true,           // El campo debe existir
+      $type: "array",         // Debe ser un array
+      $not: { $size: 0 }      // No debe estar vacío
+    },
+    $expr: { $gte: [{ $size: "$games" }, 5] }  // Tamaño >= 5
+  },
+  { nombre: 1, games: 1, _id: 0 }  // Proyección optimizada (1 en lugar de true)
+);
+
+// 🚀 ALTERNATIVA AÚN MÁS SIMPLE (si sabes que games siempre es array):
+db.pokemons.find(
+  { "games.4": { $exists: true } },  // Si existe el índice 4, tiene al menos 5 elementos
+  { nombre: 1, games: 1, _id: 0 }
+);
+
+// ===== DOCUMENTOS ANIDADOS - BOKU NO HERO =====
+
+/*
+DOCUMENTOS ANIDADOS: Contienen otros documentos o arrays como valores.
+Ventajas:
+- Datos relacionados en un solo documento
+- Consultas más rápidas (sin JOINs)
+- Estructura más natural para ciertos casos de uso
+
+Desventajas:
+- Documentos pueden crecer mucho
+- Actualizaciones complejas
+- Límite de 16MB por documento
+*/
+
+// Configuración inicial
+use bokuNoHero;
+db.createCollection("heroes");
+
+// Inserción de datos mejorada
+db.heroes.insertMany([
+  {
+    nombre: "Midoriya Izuku",
+    edad: 16,
+    quirk: "One For All",
+    academia: {
+      nombre: "U.A. High School",
+      clase: "1-A",
+      mentor: "Aizawa Shouta (Eraser Head)"
+    },
+    misiones: [
+      { 
+        nombre: "Rescate de civiles", 
+        exito: true, 
+        fecha: new Date("2024-03-15"),
+        puntuacion: 95 
+      },
+      { 
+        nombre: "Combate contra villano", 
+        exito: true, 
+        fecha: new Date("2024-04-20"),
+        puntuacion: 88 
+      }
+    ],
+    estadisticas: { fuerza: 8, velocidad: 7, inteligencia: 9 }
+  },
+  {
+    nombre: "Bakugo Katsuki",
+    edad: 16,
+    quirk: "Explosion",
+    academia: {
+      nombre: "U.A. High School",
+      clase: "1-A",
+      mentor: "Aizawa Shouta (Eraser Head)"
+    },
+    misiones: [
+      { 
+        nombre: "Entrenamiento especial", 
+        exito: true, 
+        fecha: new Date("2024-03-10"),
+        puntuacion: 92 
+      }
+    ],
+    estadisticas: { fuerza: 9, velocidad: 8, inteligencia: 8 }
+  },
+  {
+    nombre: "Todoroki Shoto",
+    edad: 16,
+    quirk: "Half-Cold Half-Hot", // Corregido
+    academia: {
+      nombre: "U.A. High School",
+      clase: "1-A",
+      mentor: "Endeavor"
+    },
+    misiones: [
+      { 
+        nombre: "Operación secreta", 
+        exito: false, 
+        fecha: new Date("2024-02-28"),
+        puntuacion: 65 
+      }
+    ],
+    estadisticas: { fuerza: 9, velocidad: 7, inteligencia: 8 }
+  },
+  {
+    nombre: "Uraraka Ochako",
+    edad: 16,
+    quirk: "Zero Gravity",
+    academia: {
+      nombre: "U.A. High School",
+      clase: "1-A",
+      mentor: "Thirteen"
+    },
+    misiones: [
+      { 
+        nombre: "Rescate en escombros", 
+        exito: true, 
+        fecha: new Date("2024-04-05"),
+        puntuacion: 90 
+      }
+    ],
+    estadisticas: { fuerza: 6, velocidad: 7, inteligencia: 8 }
+  },
+  {
+    nombre: "Iida Tenya",
+    edad: 16,
+    quirk: "Engine",
+    academia: {
+      nombre: "U.A. High School",
+      clase: "1-A",
+      mentor: "Aizawa Shouta (Eraser Head)"
+    },
+    misiones: [
+      { 
+        nombre: "Patrullaje nocturno", 
+        exito: true, 
+        fecha: new Date("2024-04-12"),
+        puntuacion: 87 
+      }
+    ],
+    estadisticas: { fuerza: 7, velocidad: 9, inteligencia: 9 }
+  }
+]);
+
+// ===== CONSULTAS BÁSICAS =====
+
+// Ver todos los documentos
+db.heroes.find();
+
+// Ver todos con formato legible
+db.heroes.find().pretty();
+
+// Contar documentos
+db.heroes.countDocuments();
+
+// ===== CONSULTAS EN CAMPOS ANIDADOS =====
+
+// Buscar por campo anidado (dot notation)
+db.heroes.find({ "academia.clase": "1-A" });
+
+// Buscar por múltiples campos anidados
+db.heroes.find({ 
+  "academia.clase": "1-A",
+  "academia.mentor": /Aizawa/ // Regex para búsqueda parcial
+});
+
+// Buscar por rango en estadísticas
+db.heroes.find({ 
+  "estadisticas.fuerza": { $gte: 8 },
+  "estadisticas.velocidad": { $gte: 8 }
+});
+
+// ===== CONSULTAS EN ARRAYS ANIDADOS =====
+
+// Encontrar héroe con misión específica
+db.heroes.find({ "misiones.nombre": "Rescate de civiles" });
+
+// Encontrar héroes con misiones exitosas
+db.heroes.find({ "misiones.exito": true });
+
+// Encontrar héroes con puntuación alta en misiones
+db.heroes.find({ "misiones.puntuacion": { $gte: 90 } });
+
+// Usar $elemMatch para condiciones múltiples en el mismo elemento del array
+db.heroes.find({
+  misiones: {
+    $elemMatch: {
+      exito: true,
+      puntuacion: { $gte: 90 }
+    }
+  }
+});
+
+// ===== PROYECCIONES OPTIMIZADAS =====
+
+// Proyectar solo campos específicos
+db.heroes.find({}, {
+  nombre: 1,
+  quirk: 1,
+  "academia.clase": 1,
+  _id: 0
+});
+
+// Proyectar misiones específicas con $elemMatch
+db.heroes.find(
+  { nombre: "Midoriya Izuku" },
+  { 
+    nombre: 1,
+    misiones: { $elemMatch: { nombre: "Rescate de civiles" } }, 
+    _id: 0 
+  }
+);
+
+// Proyectar solo misiones exitosas usando $slice y filtros
+db.heroes.aggregate([
+  { $match: { nombre: "Midoriya Izuku" } },
+  { 
+    $project: {
+      nombre: 1,
+      misionesExitosas: {
+        $filter: {
+          input: "$misiones",
+          cond: { $eq: ["$$this.exito", true] }
+        }
+      },
+      _id: 0
+    }
+  }
+]);
+
+// ===== ACTUALIZACIONES EN DOCUMENTOS ANIDADOS =====
+
+// Actualizar campo anidado simple
+db.heroes.updateOne(
+  { nombre: "Uraraka Ochako" },
+  { $set: { "academia.mentor": "All Might" } }
+);
+
+// Actualizar múltiples campos anidados
+db.heroes.updateOne(
+  { nombre: "Todoroki Shoto" },
+  { 
+    $set: { 
+      "academia.mentor": "Endeavor (Flame Hero)",
+      "estadisticas.fuerza": 10
+    }
+  }
+);
+
+// Agregar nueva información anidada
+db.heroes.updateOne(
+  { nombre: "Midoriya Izuku" },
+  { 
+    $set: { 
+      direccion: { 
+        ciudad: "Musutafu", 
+        prefectura: "Prefecture desconocida",
+        calle: "Calle 123", 
+        codigo_postal: "110-0111" // Formato japonés
+      },
+      telefono: "+81-3-1234-5678"
+    }
+  }
+);
+
+// ===== OPERACIONES EN ARRAYS =====
+
+// Agregar nueva misión
+db.heroes.updateOne(
+  { nombre: "Bakugo Katsuki" },
+  { 
+    $push: { 
+      misiones: {
+        nombre: "Entrenamiento de combate",
+        exito: true,
+        fecha: new Date(),
+        puntuacion: 95
+      }
+    }
+  }
+);
+
+// Agregar múltiples misiones
+db.heroes.updateOne(
+  { nombre: "Iida Tenya" },
+  { 
+    $push: { 
+      misiones: {
+        $each: [
+          {
+            nombre: "Rescate urbano",
+            exito: true,
+            fecha: new Date(),
+            puntuacion: 89
+          },
+          {
+            nombre: "Entrenamiento de velocidad",
+            exito: true,
+            fecha: new Date(),
+            puntuacion: 94
+          }
+        ]
+      }
+    }
+  }
+);
+
+// Eliminar misión específica
+db.heroes.updateOne(
+  { nombre: "Bakugo Katsuki" },
+  { $pull: { misiones: { nombre: "Entrenamiento especial" } } }
+);
+
+// Eliminar misiones fallidas
+db.heroes.updateMany(
+  {},
+  { $pull: { misiones: { exito: false } } }
+);
+
+// Actualizar elemento específico en array (usando posición)
+db.heroes.updateOne(
+  { 
+    nombre: "Midoriya Izuku",
+    "misiones.nombre": "Rescate de civiles"
+  },
+  { 
+    $set: { 
+      "misiones.$.puntuacion": 98,  // $ representa el elemento encontrado
+      "misiones.$.comentario": "Excelente trabajo en equipo"
+    }
+  }
+);
+
+// ===== CONSULTAS AVANZADAS CON AGREGACIÓN =====
+
+// Obtener estadísticas por mentor
+db.heroes.aggregate([
+  {
+    $group: {
+      _id: "$academia.mentor",
+      totalHeroes: { $sum: 1 },
+      promedioFuerza: { $avg: "$estadisticas.fuerza" },
+      heroes: { $push: "$nombre" }
+    }
+  },
+  { $sort: { totalHeroes: -1 } }
+]);
+
+// Obtener héroes con mejor rendimiento en misiones
+db.heroes.aggregate([
+  { $unwind: "$misiones" },
+  {
+    $group: {
+      _id: "$nombre",
+      promedioPuntuacion: { $avg: "$misiones.puntuacion" },
+      totalMisiones: { $sum: 1 },
+      misionesExitosas: {
+        $sum: { $cond: [{ $eq: ["$misiones.exito", true] }, 1, 0] }
+      }
+    }
+  },
+  {
+    $addFields: {
+      porcentajeExito: {
+        $multiply: [
+          { $divide: ["$misionesExitosas", "$totalMisiones"] },
+          100
+        ]
+      }
+    }
+  },
+  { $sort: { promedioPuntuacion: -1 } }
+]);
+
+// ===== ÍNDICES PARA OPTIMIZACIÓN =====
+
+// Crear índices para consultas frecuentes
+db.heroes.createIndex({ "academia.clase": 1 });
+db.heroes.createIndex({ "misiones.exito": 1 });
+db.heroes.createIndex({ nombre: 1 });
+db.heroes.createIndex({ "estadisticas.fuerza": 1, "estadisticas.velocidad": 1 });
+
+// Índice compuesto para consultas complejas
+db.heroes.createIndex({ 
+  "academia.clase": 1, 
+  "misiones.exito": 1,
+  "estadisticas.fuerza": -1 
+});
+
+// Ver índices existentes
+db.heroes.getIndexes();
